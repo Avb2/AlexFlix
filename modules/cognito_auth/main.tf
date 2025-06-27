@@ -4,16 +4,10 @@ locals {
     mfa_config = "ON"
     sms_msg = "Your code for AlexFlix is {####}"
 
-    # Region config
-    region = "us-east-1"
 
     # Role config
     role_name = "access_sns_role"
     perm_name = "sns_perms"
-
-
-
-
 }
 
 
@@ -25,7 +19,6 @@ locals {
 data "aws_iam_policy_document" "sns_allow_trust_policy" {
   statement {
     actions = ["sts:AssumeRole"]
-
     principals {
       type        = "Service"
       identifiers = ["cognito-idp.amazonaws.com"]
@@ -36,9 +29,11 @@ data "aws_iam_policy_document" "sns_allow_trust_policy" {
 # Allows role to use SNS
 data "aws_iam_policy_document" "sns_perms_document_policy" {
   statement {
-    actions = ["*"]
+    actions = [
+      "lambda:*"
+      ]
     resources = [
-        "*" #### CHange this to sns arn when created
+        var.cognito_lambda_arn
     ]
   }
 }
@@ -76,7 +71,6 @@ resource "aws_iam_role_policy_attachment" "sns_attach_perms" {
 
 resource "aws_cognito_user_pool" "user_pool" {
   name                      = local.pool_name
-  region                    = local.region
   mfa_configuration         = local.mfa_config
 
 
@@ -102,14 +96,11 @@ resource "aws_cognito_user_pool" "user_pool" {
     require_uppercase = true
   }
 
-  sign_in_policy {
-    allowed_first_auth_factors = ["PASSWORD"]
-  }
 
 
   custom_email_sender {
-    lambda_arn = 
-    lambda_version =
+    lambda_arn = module.lambda_cognito.lambda_arn
+    lambda_version = 1
   }
   
 }
